@@ -9,6 +9,7 @@ package errgroup
 import (
 	"context"
 	"fmt"
+	"runtime"
 	"sync"
 )
 
@@ -27,12 +28,18 @@ func FromPanicValue(i interface{}) error {
 	case nil:
 		return nil
 	case string:
-		return fmt.Errorf("panic: %v\n",value)
+		return fmt.Errorf("panic: %v\n%s", value, CollectStack())
 	case error:
-		return fmt.Errorf("panic in errgroup goroutine %w", value)
+		return fmt.Errorf("panic in errgroup goroutine %w\n%s", value, CollectStack())
 	default:
-		return fmt.Errorf("unknown panic: %+v\n",value)
+		return fmt.Errorf("unknown panic: %+v\n%s", value, CollectStack())
 	}
+}
+
+func CollectStack() []byte {
+	buf := make([]byte, 64<<10)
+	buf = buf[:runtime.Stack(buf, false)]
+	return buf
 }
 
 func catchPanics(f func() error) func() error {
